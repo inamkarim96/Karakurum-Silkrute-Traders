@@ -1,0 +1,337 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+}
+
+model addresses {
+  id           String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  user_id      String   @db.Uuid
+  full_name    String?  @db.VarChar(100)
+  phone        String?  @db.VarChar(20)
+  address_line String?
+  city         String?  @db.VarChar(100)
+  province     String?  @db.VarChar(100)
+  postal_code  String?  @db.VarChar(20)
+  country      String   @default("PK") @db.VarChar(10)
+  is_default   Boolean  @default(false)
+  created_at   DateTime @default(now()) @db.Timestamptz(6)
+  updated_at   DateTime @default(now()) @db.Timestamptz(6)
+  users        users    @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "addresses_user_id_foreign")
+
+  @@index([user_id])
+}
+
+model cart_items {
+  id              String          @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  user_id         String          @db.Uuid
+  product_id      String          @db.Uuid
+  variant_id      String          @db.Uuid
+  quantity        Int
+  created_at      DateTime        @default(now()) @db.Timestamptz(6)
+  updated_at      DateTime        @default(now()) @db.Timestamptz(6)
+  products        products        @relation(fields: [product_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "cart_items_product_id_foreign")
+  users           users           @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "cart_items_user_id_foreign")
+  product_variants product_variants @relation(fields: [variant_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "cart_items_variant_id_foreign")
+
+  @@unique([user_id, variant_id], map: "cart_items_user_id_variant_id_unique")
+  @@index([user_id])
+}
+
+model categories {
+  id         String     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name       String     @db.VarChar(100)
+  slug       String     @unique(map: "categories_slug_unique") @db.VarChar(120)
+  image      String?
+  created_at DateTime   @default(now()) @db.Timestamptz(6)
+  updated_at DateTime   @default(now()) @db.Timestamptz(6)
+  products   products[]
+}
+
+model coupons {
+  id               String      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  code             String      @unique(map: "coupons_code_unique") @db.VarChar(50)
+  type             coupon_type
+  value            Decimal     @db.Decimal(10, 2)
+  min_order_amount Decimal     @default(0) @db.Decimal(10, 2)
+  max_uses         Int?
+  used_count       Int         @default(0)
+  expires_at       DateTime?   @db.Timestamptz(6)
+  is_active        Boolean     @default(true)
+  created_at       DateTime    @default(now()) @db.Timestamptz(6)
+  updated_at       DateTime    @default(now()) @db.Timestamptz(6)
+}
+
+model order_history {
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  order_id    String   @db.Uuid
+  status_from String?  @db.VarChar(50)
+  status_to   String   @db.VarChar(50)
+  changed_by  String?  @db.Uuid
+  notes       String?
+  created_at  DateTime @default(now()) @db.Timestamptz(6)
+  users       users?   @relation(fields: [changed_by], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "order_history_changed_by_foreign")
+  orders      orders   @relation(fields: [order_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "order_history_order_id_foreign")
+
+  @@index([order_id])
+}
+
+model order_items {
+  id              String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  order_id        String           @db.Uuid
+  product_id      String           @db.Uuid
+  variant_id      String?          @db.Uuid
+  product_name    String           @db.VarChar(200)
+  quantity        Int
+  unit_price      Decimal          @db.Decimal(10, 2)
+  subtotal        Decimal          @db.Decimal(10, 2)
+  orders          orders           @relation(fields: [order_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "order_items_order_id_foreign")
+  products        products         @relation(fields: [product_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "order_items_product_id_foreign")
+  product_variants product_variants? @relation(fields: [variant_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "order_items_variant_id_foreign")
+
+  @@index([order_id])
+  @@index([product_id])
+}
+
+model orders {
+  id               String          @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  user_id          String          @db.Uuid
+  status           order_status    @default(pending)
+  subtotal         Decimal         @db.Decimal(10, 2)
+  shipping_fee     Decimal         @default(0) @db.Decimal(10, 2)
+  discount         Decimal         @default(0) @db.Decimal(10, 2)
+  total            Decimal         @db.Decimal(10, 2)
+  shipping_address Json
+  coupon_code      String?         @db.VarChar(50)
+  tracking_number  String?         @db.VarChar(100)
+  courier          String?         @db.VarChar(100)
+  notes            String?
+  created_at       DateTime        @default(now()) @db.Timestamptz(6)
+  updated_at       DateTime        @default(now()) @db.Timestamptz(6)
+  admin_notes      String?
+  order_history    order_history[]
+  order_items      order_items[]
+  users            users           @relation(fields: [user_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "orders_user_id_foreign")
+  payments         payments?
+
+  @@index([user_id])
+  @@index([status])
+  @@index([created_at(sort: Desc)])
+}
+
+model payments {
+  id             String          @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  order_id       String          @unique(map: "payments_order_id_unique") @db.Uuid
+  gateway        payment_gateway
+  transaction_id String?         @db.VarChar(255)
+  amount         Decimal         @db.Decimal(10, 2)
+  status         payment_status  @default(pending)
+  gateway_resp   Json?
+  paid_at        DateTime?       @db.Timestamptz(6)
+  created_at     DateTime        @default(now()) @db.Timestamptz(6)
+  updated_at     DateTime        @default(now()) @db.Timestamptz(6)
+  orders         orders          @relation(fields: [order_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "payments_order_id_foreign")
+}
+
+model products {
+  id                 String             @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  category_id        String?            @db.Uuid
+  name               String             @db.VarChar(200)
+  slug               String             @unique(map: "products_slug_unique") @db.VarChar(220)
+  description        String?
+  base_price         Decimal            @db.Decimal(10, 2)
+  wholesale_price    Decimal?           @db.Decimal(10, 2)
+  min_wholesale_qty  Int?
+  stock              Int                @default(0)
+  images             String[]
+  is_featured        Boolean            @default(false)
+  is_active          Boolean            @default(true)
+  created_at         DateTime           @default(now()) @db.Timestamptz(6)
+  updated_at         DateTime           @default(now()) @db.Timestamptz(6)
+  search_vector      Unsupported("tsvector")?
+  cart_items         cart_items[]
+  order_items        order_items[]
+  categories         categories?        @relation(fields: [category_id], references: [id])
+  reviews            reviews[]
+  product_variants   product_variants[]
+
+  @@index([category_id, is_active])
+  @@index([created_at(sort: Desc)])
+  @@index([is_active])
+}
+
+model reviews {
+  id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  user_id    String   @db.Uuid
+  product_id String   @db.Uuid
+  rating     Int
+  title      String?  @db.VarChar(200)
+  body       String?
+  created_at DateTime @default(now()) @db.Timestamptz(6)
+  updated_at DateTime @default(now()) @db.Timestamptz(6)
+  products   products @relation(fields: [product_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "reviews_product_id_foreign")
+  users      users    @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "reviews_user_id_foreign")
+
+  @@unique([user_id, product_id], map: "reviews_user_id_product_id_unique")
+  @@index([product_id])
+}
+
+enum auth_provider {
+  local
+  google
+}
+
+model users {
+  id                    String          @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name                  String          @db.VarChar(100)
+  email                 String          @unique(map: "users_email_unique") @db.VarChar(255)
+  password_hash         String?         @db.VarChar(255)
+  role                  user_role       @default(customer)
+  phone                 String?         @db.VarChar(20)
+  is_active             Boolean         @default(true)
+  email_verified        Boolean         @default(false)
+  failed_login_attempts Int             @default(0)
+  locked_until          DateTime?       @db.Timestamptz(6)
+  created_at            DateTime        @default(now()) @db.Timestamptz(6)
+  updated_at            DateTime        @default(now()) @db.Timestamptz(6)
+  fcm_token             String?
+  auth_provider         auth_provider   @default(local)
+  google_id             String?         @unique(map: "users_google_id_unique") @db.VarChar(255)
+  addresses             addresses[]
+  cart_items            cart_items[]
+  order_history         order_history[]
+  orders                orders[]
+  reviews               reviews[]
+}
+
+// Generic product variant: replaces the old weight-based (grams) model so
+// it can represent any attribute type (size, color, material, etc.) - this
+// makes it fit blankets/textiles as well as any future item type without a
+// schema change. attribute_name/attribute_value are admin-entered, not enums.
+model product_variants {
+  id               String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  product_id       String        @db.Uuid
+  label            String        @db.VarChar(50)  // e.g. "King Size - Maroon"
+  attribute_name   String?       @db.VarChar(50)  // e.g. "Size", "Color", "Material"
+  attribute_value  String?       @db.VarChar(100) // e.g. "King", "Maroon", "Wool"
+  price            Decimal       @db.Decimal(10, 2)
+  wholesale_price  Decimal?      @db.Decimal(10, 2)
+  stock            Int           @default(0)
+  sort_order       Int           @default(0)
+  cart_items       cart_items[]
+  order_items      order_items[]
+  products         products      @relation(fields: [product_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "product_variants_product_id_foreign")
+
+  @@index([product_id])
+  @@index([stock])
+}
+
+// Singleton table (always exactly one row) holding admin-editable company
+// info. Frontend (Navbar/Footer/About/Contact) reads this instead of any
+// hardcoded text, so updates never require a code deploy.
+model site_settings {
+  id                     String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  company_name           String   @db.VarChar(200)
+  tagline                String?  @db.VarChar(255)
+  logo_url               String?
+  address_line           String?
+  city                   String?  @db.VarChar(100)
+  email                  String?  @db.VarChar(255)
+  // Separate email for order/notification alerts — falls back to email if null
+  notification_email     String?  @db.VarChar(255)
+  phone                  String?  @db.VarChar(20)
+  whatsapp               String?  @db.VarChar(20)
+  facebook_url           String?
+  instagram_url          String?
+  website_url            String?
+  map_embed_url          String?
+  footer_text            String?
+  // Page hero / section images managed from the admin Site Settings panel
+  hero_image_url         String?
+  about_hero_image_url   String?
+  about_mission_image_url String?
+  contact_hero_image_url  String?
+  updated_at             DateTime @default(now()) @updatedAt @db.Timestamptz(6)
+}
+
+// Admin-managed list of services shown on the Services page/section
+// (e.g. bulk trading, China sourcing, cargo, customs clearance).
+model services {
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  title       String   @db.VarChar(150)
+  description String?
+  icon        String?  @db.VarChar(50)
+  is_active   Boolean  @default(true)
+  sort_order  Int      @default(0)
+  created_at  DateTime @default(now()) @db.Timestamptz(6)
+  updated_at  DateTime @default(now()) @db.Timestamptz(6)
+
+  @@index([is_active, sort_order])
+}
+
+// Admin-managed leadership list (CEO, Directors, etc.) rendered on About page.
+model team_members {
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name        String   @db.VarChar(150)
+  title       String   @db.VarChar(100)
+  photo_url   String?
+  bio         String?
+  is_active   Boolean  @default(true)
+  sort_order  Int      @default(0)
+  created_at  DateTime @default(now()) @db.Timestamptz(6)
+  updated_at  DateTime @default(now()) @db.Timestamptz(6)
+
+  @@index([is_active, sort_order])
+}
+
+// Persistent admin notifications — survive page refresh and power cycles.
+// Created whenever a noteworthy event occurs (new order, delivery, etc.).
+// The SSE push in adminNotifier.js fires at the same time for instant in-tab
+// delivery; this table is the source of truth for the notification bell count.
+model notifications {
+  id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  type       String   @db.VarChar(50)   // e.g. "NEW_ORDER", "ORDER_DELIVERED"
+  title      String   @db.VarChar(200)
+  body       String?
+  data       Json?                       // extra payload: { orderId, customerEmail, total }
+  is_read    Boolean  @default(false)
+  created_at DateTime @default(now()) @db.Timestamptz(6)
+
+  @@index([is_read])
+  @@index([created_at(sort: Desc)])
+}
+
+enum coupon_type {
+  percentage
+  fixed
+}
+
+enum order_status {
+  pending
+  processing
+  shipped
+  delivered
+  cancelled
+}
+
+enum payment_gateway {
+  jazzcash
+  easypaisa
+  stripe
+  cod
+}
+
+enum payment_status {
+  pending
+  completed
+  failed
+  refunded
+}
+
+enum user_role {
+  customer
+  admin
+}
