@@ -78,8 +78,10 @@ app.get("/", (req, res) => {
   });
 });
 
-// Handle favicon requests cleanly
+// Handle favicon and crawler requests cleanly without 404 logs
 app.get("/favicon.ico", (req, res) => res.status(204).end());
+app.get("/favicon.png", (req, res) => res.status(204).end());
+app.get("/robots.txt", (req, res) => res.type("text/plain").send("User-agent: *\nAllow: /\nDisallow: /api/"));
 
 app.use("/api", apiV1Router);
 
