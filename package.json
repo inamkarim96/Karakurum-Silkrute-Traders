@@ -7,6 +7,7 @@
     "server"
   ],
   "scripts": {
+    "build": "npm run build --prefix client && npx prisma generate --schema=server/prisma/schema.prisma",
     "dev": "concurrently \"npm run dev -w client\" \"npm run dev -w server\"",
     "kill-node": "taskkill /IM node.exe /F",
     "check-node": "tasklist | findstr node",
