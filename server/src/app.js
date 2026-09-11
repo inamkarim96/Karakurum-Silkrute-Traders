@@ -31,20 +31,32 @@ app.use(
 );
 
 // Remove any trailing slashes from FRONTEND_URL since Origin headers never have them
-const cleanFrontendUrl = FRONTEND_URL.replace(/\/$/, "");
+const cleanFrontendUrl = FRONTEND_URL.replace(/\/+$/, "");
 
 const allowedOrigins = [
   cleanFrontendUrl, 
-  cleanFrontendUrl.toLowerCase()
+  cleanFrontendUrl.toLowerCase(),
+  "http://localhost:5173",
+  "http://localhost:5174",
+  "http://localhost:5175"
 ];
-
-if (process.env.NODE_ENV === "development") {
-  allowedOrigins.push("http://localhost:5173", "http://localhost:5174", "http://localhost:5175");
-}
 
 app.use(
   cors({
-    origin: allowedOrigins,
+    origin: (origin, callback) => {
+      if (!origin) return callback(null, true);
+      const norm = origin.replace(/\/+$/, "").toLowerCase();
+      if (allowedOrigins.some(o => o.toLowerCase() === norm)) {
+        return callback(null, true);
+      }
+      try {
+        const host = new URL(origin).hostname;
+        if (host.endsWith(".vercel.app")) {
+          return callback(null, true);
+        }
+      } catch (_) {}
+      return callback(null, true);
+    },
     credentials: true
   })
 );
@@ -56,6 +68,15 @@ app.use("/", globalLimiter);
 app.use("/api/payments/webhook/stripe", express.raw({ type: "application/json" }));
 app.use(express.json({ limit: "1mb" }));
 app.use(requestLogger);
+
+// Root health & info check
+app.get("/", (req, res) => {
+  res.status(200).json({
+    success: true,
+    message: "Karakurum Silkrute Traders API is running",
+    timestamp: new Date().toISOString()
+  });
+});
 
 app.use("/api", apiV1Router);
 
