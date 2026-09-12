@@ -6,43 +6,50 @@ const AuthContext = createContext();
 
 export const useAuth = () => useContext(AuthContext);
 
-export const AuthProvider = ({ children }) => {
-  const [user, setUser] = useState(null);
-  const [loading, setLoading] = useState(true);
+// Read stored user synchronously so the first render already has auth state
+const getStoredUser = () => {
+  try {
+    const token = localStorage.getItem('auth_token');
+    const stored = localStorage.getItem('auth_user');
+    if (token && stored) return JSON.parse(stored);
+  } catch {
+    // ignore parse errors
+  }
+  return null;
+};
 
-  // Initialize auth state and validate token on load
+export const AuthProvider = ({ children }) => {
+  const [user, setUser] = useState(getStoredUser); // synchronous init – no flash
+  const [loading, setLoading] = useState(false);   // never blocks rendering
+
+  // Background token validation – runs AFTER render, never blocks the UI
   useEffect(() => {
-    const initAuth = async () => {
-      const token = localStorage.getItem('auth_token');
-      const storedUser = localStorage.getItem('auth_user');
-      
-      if (token && storedUser) {
-        try {
-          // Validate token by fetching profile
-          const response = await authApi.getProfile();
-          if (response.success && response.data.user) {
-            const sessionUser = response.data.user;
-            localStorage.setItem('auth_user', JSON.stringify(sessionUser));
-            setUser(sessionUser);
-          } else {
-            // Token invalid, clear storage
-            localStorage.removeItem('auth_token');
-            localStorage.removeItem('auth_user');
-            setUser(null);
-          }
-        } catch (err) {
-          // Token invalid or expired, clear storage
+    const token = localStorage.getItem('auth_token');
+    if (!token) return; // no token, nothing to validate
+
+    const validateToken = async () => {
+      try {
+        const response = await authApi.getProfile();
+        if (response.success && response.data.user) {
+          // Refresh stored user with latest data from server
+          const sessionUser = response.data.user;
+          localStorage.setItem('auth_user', JSON.stringify(sessionUser));
+          setUser(sessionUser);
+        }
+        // If response.success is false but no error thrown, keep existing user
+      } catch (err) {
+        // Only log out on explicit 401 / 403 (token truly invalid/expired)
+        const status = err?.response?.status;
+        if (status === 401 || status === 403) {
           localStorage.removeItem('auth_token');
           localStorage.removeItem('auth_user');
           setUser(null);
         }
-      } else {
-        setUser(null);
+        // Network errors, 500s, timeouts → keep user logged in
       }
-      setLoading(false);
     };
-    
-    initAuth();
+
+    validateToken();
   }, []);
 
   // Idle Timeout (Auto Logout for Admins)
@@ -113,7 +120,7 @@ export const AuthProvider = ({ children }) => {
 
   return (
     <AuthContext.Provider value={{ user, setUser, login, register: authApi.register, logout, updateProfile, loading }}>
-      {!loading && children}
+      {children}
     </AuthContext.Provider>
   );
 };
