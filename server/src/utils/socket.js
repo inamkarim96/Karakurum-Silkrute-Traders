@@ -18,7 +18,20 @@ const init = (server) => {
 
   io = new Server(server, {
     cors: {
-      origin: allowedOrigins,
+      origin: (origin, callback) => {
+        if (!origin) return callback(null, true);
+        const norm = origin.replace(/\/+$/, "").toLowerCase();
+        if (allowedOrigins.some(o => o.toLowerCase() === norm)) {
+          return callback(null, true);
+        }
+        try {
+          const host = new URL(origin).hostname;
+          if (host.endsWith(".vercel.app")) {
+            return callback(null, true);
+          }
+        } catch (_) {}
+        return callback(null, true);
+      },
       credentials: true,
     },
   });

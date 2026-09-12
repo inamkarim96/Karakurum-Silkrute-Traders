@@ -28,7 +28,8 @@ const LoginPage = () => {
       return;
     }
     const backendUrl = getBackendBase();
-    window.location.href = `${backendUrl}/api/auth/google`;
+    const origin = typeof window !== 'undefined' ? window.location.origin : '';
+    window.location.href = `${backendUrl}/api/auth/google?origin=${encodeURIComponent(origin)}`;
   };
 
   const submit = async (event) => {
