@@ -4,13 +4,10 @@ import toast from 'react-hot-toast';
 import { useAuth } from './AuthContext';
 import { clearApiCache } from '../api/axios';
 import useNotificationStore from '../store/useNotificationStore';
+import { getBackendBase, getApiBase } from '../utils/apiUrl';
 
-const BASE_URL = import.meta.env.VITE_API_URL?.endsWith('/api')
-  ? import.meta.env.VITE_API_URL.replace(/\/api$/, '')
-  : (import.meta.env.VITE_API_URL || '');
-
-// Full API base (with /api) for SSE endpoint
-const API_BASE = import.meta.env.VITE_API_URL || '';
+const BASE_URL = getBackendBase();
+const API_BASE = getApiBase();
 
 const SocketContext = createContext(null);
 

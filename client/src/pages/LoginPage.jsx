@@ -4,6 +4,8 @@ import { ArrowRight, Globe } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { Button, Input, Card } from '../components/ui';
 
+import { getBackendBase } from '../utils/apiUrl';
+
 const LoginPage = () => {
   const navigate = useNavigate();
   const { login, register } = useAuth();
@@ -25,7 +27,7 @@ const LoginPage = () => {
       setError('Google Sign-In not configured. Please contact administrator.');
       return;
     }
-    const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
+    const backendUrl = getBackendBase();
     window.location.href = `${backendUrl}/api/auth/google`;
   };
 

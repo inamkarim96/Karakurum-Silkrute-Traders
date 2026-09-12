@@ -5,10 +5,9 @@ import { useAuth } from '../context/AuthContext';
 import useNotificationStore from '../store/useNotificationStore';
 
 import { clearApiCache } from '../api/axios';
+import { getBackendBase } from '../utils/apiUrl';
 
-const BASE_URL = import.meta.env.VITE_API_URL?.endsWith('/api')
-  ? import.meta.env.VITE_API_URL.replace(/\/api$/, '')
-  : (import.meta.env.VITE_API_URL || '');
+const BASE_URL = getBackendBase();
 
 export const useSocket = () => {
   const { user } = useAuth();
