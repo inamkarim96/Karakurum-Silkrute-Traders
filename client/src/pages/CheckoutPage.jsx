@@ -74,7 +74,7 @@ const CheckoutPage = () => {
     if (!formData.address) errors.address = 'Address is required';
     if (!formData.city) errors.city = 'City is required';
     if (!formData.zipCode) errors.zipCode = 'ZIP Code is required';
-    
+
     setFormErrors(errors);
     if (Object.keys(errors).length === 0) {
       setStep(2);
@@ -163,9 +163,9 @@ const CheckoutPage = () => {
       if (gateway === 'stripe') {
         const payResponse = await ordersApi.initiatePayment(orderId, 'stripe');
         const paymentUrl = payResponse.data?.payment_url;
-        
+
         if (!paymentUrl) throw new Error('Stripe response missing payment URL.');
-        
+
         window.location.href = paymentUrl;
         return; // Redirecting to Stripe hosted checkout
       }
@@ -270,7 +270,7 @@ const CheckoutPage = () => {
                           name="firstName"
                           value={formData.firstName}
                           onChange={handleInputChange}
-                          placeholder="Jane"
+                          placeholder="first name "
                           error={formErrors.firstName}
                         />
                         <Input
@@ -278,7 +278,7 @@ const CheckoutPage = () => {
                           name="lastName"
                           value={formData.lastName}
                           onChange={handleInputChange}
-                          placeholder="Doe"
+                          placeholder="last name"
                           error={formErrors.lastName}
                         />
                       </div>
@@ -287,7 +287,7 @@ const CheckoutPage = () => {
                         name="address"
                         value={formData.address}
                         onChange={handleInputChange}
-                        placeholder="123 Nature St"
+                        placeholder="house and street address"
                         error={formErrors.address}
                       />
                       <div className="grid grid-cols-2 gap-4">
@@ -296,7 +296,7 @@ const CheckoutPage = () => {
                           name="city"
                           value={formData.city}
                           onChange={handleInputChange}
-                          placeholder="Karachi"
+                          placeholder="city name"
                           error={formErrors.city}
                         />
                         <Input
@@ -304,7 +304,7 @@ const CheckoutPage = () => {
                           name="zipCode"
                           value={formData.zipCode}
                           onChange={handleInputChange}
-                          placeholder="75500"
+                          placeholder="postal code"
                           error={formErrors.zipCode}
                         />
                       </div>
@@ -419,11 +419,11 @@ const CheckoutPage = () => {
                       <Button variant="admin-outline" size="lg" className="flex-1 h-14" onClick={() => setStep(2)} icon={ArrowLeft}>
                         Back
                       </Button>
-                      <Button 
-                        variant="primary" 
-                        size="lg" 
-                        className="flex-[2] h-14 text-lg" 
-                        onClick={handlePlaceOrder} 
+                      <Button
+                        variant="primary"
+                        size="lg"
+                        className="flex-[2] h-14 text-lg"
+                        onClick={handlePlaceOrder}
                         loading={loading}
                       >
                         {loading ? 'Processing...' : `Place Order • PKR ${Math.round(total).toLocaleString()}`}
@@ -488,23 +488,23 @@ const CheckoutPage = () => {
               </div>
 
               <div className="promo-section pb-6 border-b border-slate-200 mb-6">
-                 <div className="flex gap-2">
-                    <Input
-                      placeholder="Promo Code"
-                      value={promoCode}
-                      onChange={(e) => setPromoCode(e.target.value)}
-                      containerClassName="mb-0 flex-1"
-                      className="h-10"
-                    />
-                    <Button variant="admin-primary" size="sm" onClick={handleApplyPromo} loading={promoLoading} className="h-10">
-                      Apply
-                    </Button>
-                 </div>
-                 {promoMsg && (
-                   <p className={`text-xs mt-2 font-bold ${promoMsg.type === 'success' ? 'text-emerald-600' : 'text-red-500'}`}>
-                     {promoMsg.text}
-                   </p>
-                 )}
+                <div className="flex gap-2">
+                  <Input
+                    placeholder="Promo Code"
+                    value={promoCode}
+                    onChange={(e) => setPromoCode(e.target.value)}
+                    containerClassName="mb-0 flex-1"
+                    className="h-10"
+                  />
+                  <Button variant="admin-primary" size="sm" onClick={handleApplyPromo} loading={promoLoading} className="h-10">
+                    Apply
+                  </Button>
+                </div>
+                {promoMsg && (
+                  <p className={`text-xs mt-2 font-bold ${promoMsg.type === 'success' ? 'text-emerald-600' : 'text-red-500'}`}>
+                    {promoMsg.text}
+                  </p>
+                )}
               </div>
 
               <div className="flex items-center justify-center gap-2 text-slate-400 text-xs font-medium">

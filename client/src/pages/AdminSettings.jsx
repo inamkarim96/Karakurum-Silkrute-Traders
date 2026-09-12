@@ -152,6 +152,7 @@ const AdminSettings = () => {
           address_line: s.address_line || '',
           city: s.city || '',
           email: s.email || '',
+          notification_email: s.notification_email || '',
           phone: s.phone || '',
           whatsapp: s.whatsapp || '',
           facebook_url: s.facebook_url || '',

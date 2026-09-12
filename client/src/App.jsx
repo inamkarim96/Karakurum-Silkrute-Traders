@@ -7,6 +7,7 @@ import MainLayout from './layouts/MainLayout';
 import AdminLayout from './layouts/AdminLayout';
 import PageSkeleton from './components/PageSkeleton';
 import { motion, AnimatePresence } from 'framer-motion';
+import OrderStatusToast from './components/OrderStatusToast';
 
 
 const LandingPage = lazy(() => import('./pages/LandingPage'));
@@ -69,6 +70,8 @@ function App() {
           style: { borderRadius: '12px', fontSize: '14px' },
         }}
       />
+      {/* Customer order status live notifications */}
+      <OrderStatusToast />
 
       <Suspense fallback={<PageSkeleton />}>
         <AnimatePresence mode="wait">

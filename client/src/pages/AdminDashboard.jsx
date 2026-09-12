@@ -5,19 +5,45 @@ import {
   ShoppingCart, 
   Package, 
   AlertTriangle,
+  Bell,
+  CheckCheck,
+  XCircle,
+  CheckCircle2,
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { Button, Badge } from '../components/ui';
+import useNotificationStore from '../store/useNotificationStore';
 
 import api from '../api/axios';
 import { toast } from 'react-hot-toast';
 import { Link } from 'react-router-dom';
+
+function timeAgo(dateString) {
+  if (!dateString) return '';
+  const now = new Date();
+  const past = new Date(dateString);
+  const diffSec = Math.floor((now - past) / 1000);
+  if (diffSec < 60) return 'Just now';
+  const diffMin = Math.floor(diffSec / 60);
+  if (diffMin < 60) return `${diffMin}m ago`;
+  const diffHours = Math.floor(diffMin / 60);
+  if (diffHours < 24) return `${diffHours}h ago`;
+  return `${Math.floor(diffHours / 24)}d ago`;
+}
 
 const AdminDashboard = () => {
   const [overview, setOverview] = useState(null);
   const [inventory, setInventory] = useState([]);
   const [recentOrders, setRecentOrders] = useState([]);
   const [loading, setLoading] = useState(true);
+
+  const {
+    notifications,
+    unreadCount,
+    loading: notifLoading,
+    fetchNotifications,
+    markAllAsRead,
+  } = useNotificationStore();
 
   const fetchDashboardData = async (showLoader = true) => {
     try {
@@ -41,16 +67,18 @@ const AdminDashboard = () => {
 
   useEffect(() => {
     fetchDashboardData(true);
+    fetchNotifications({ limit: 5 });
 
     const handleSocketUpdate = () => {
       fetchDashboardData(false);
+      fetchNotifications({ limit: 5 });
     };
 
     window.addEventListener('socket:order_update', handleSocketUpdate);
     return () => {
       window.removeEventListener('socket:order_update', handleSocketUpdate);
     };
-  }, []);
+  }, [fetchNotifications]);
 
   const stats = [
     {
@@ -74,6 +102,13 @@ const AdminDashboard = () => {
       icon: <Package size={24} />,
     },
   ];
+
+  const getNotifIcon = (type) => {
+    if (type === 'NEW_ORDER') return <Package size={16} className="text-emerald-500" />;
+    if (type === 'ORDER_DELIVERED') return <CheckCircle2 size={16} className="text-blue-500" />;
+    if (type === 'ORDER_CANCELLED') return <XCircle size={16} className="text-red-500" />;
+    return <Bell size={16} className="text-amber-500" />;
+  };
 
   return (
     <div className="admin-dashboard">
@@ -172,6 +207,56 @@ const AdminDashboard = () => {
                     Restock
                   </Button>
                 </div>
+              ))
+            )}
+          </div>
+        </div>
+
+        {/* ── Recent Notifications Panel ─────────────────────────────── */}
+        <div className="dashboard-panel">
+          <div className="panel-header">
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <h2>Recent Notifications</h2>
+              {unreadCount > 0 && (
+                <span style={{
+                  background: '#ef4444',
+                  color: '#fff',
+                  borderRadius: '999px',
+                  fontSize: '11px',
+                  fontWeight: 700,
+                  padding: '1px 7px'
+                }}>{unreadCount}</span>
+              )}
+            </div>
+            {unreadCount > 0 && (
+              <button
+                onClick={markAllAsRead}
+                style={{ fontSize: '12px', color: '#64748b', display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer', background: 'none', border: 'none' }}
+                title="Mark all as read"
+              >
+                <CheckCheck size={14} /> Mark all read
+              </button>
+            )}
+          </div>
+          <div className="alerts-list">
+            {notifLoading && notifications.length === 0 ? (
+              <p className="state-msg">Loading notifications...</p>
+            ) : notifications.length === 0 ? (
+              <p className="state-msg">No notifications yet.</p>
+            ) : (
+              notifications.slice(0, 5).map((notif) => (
+                <Link key={notif.id} to="/admin/orders" style={{ textDecoration: 'none' }}>
+                  <div className="alert-item" style={{ opacity: notif.is_read ? 0.65 : 1 }}>
+                    <div className="alert-info" style={{ flexDirection: 'row', alignItems: 'center', gap: '10px' }}>
+                      <span style={{ flexShrink: 0 }}>{getNotifIcon(notif.type)}</span>
+                      <div>
+                        <strong style={{ fontSize: '13px' }}>{notif.title}</strong>
+                        {notif.body && <span style={{ display: 'block', fontSize: '12px', color: '#64748b', marginTop: '2px' }}>{notif.body}</span>}
+                      </div>
+                    </div>
+                    <span style={{ fontSize: '11px', color: '#94a3b8', flexShrink: 0 }}>{timeAgo(notif.created_at)}</span>
+                  </div>
+                </Link>
               ))
             )}
           </div>

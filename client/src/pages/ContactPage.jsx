@@ -16,7 +16,7 @@ const ContactPage = () => {
   const [settings, setSettings] = useState(null);
 
   useEffect(() => {
-    getSettings().then((response) => setSettings(response.data?.settings || null)).catch(() => {});
+    getSettings().then((response) => setSettings(response.data?.settings || null)).catch(() => { });
   }, []);
 
   const address = [settings?.address_line, settings?.city].filter(Boolean).join(', ') || 'Danyore, Gilgit-Baltistan';
@@ -208,7 +208,7 @@ const ContactPage = () => {
                   value={formData.name}
                   onChange={handleChange}
                   required
-                  placeholder="Jane Doe"
+                  placeholder="name"
                   containerClassName="mb-0"
                 />
 
@@ -220,7 +220,7 @@ const ContactPage = () => {
                   value={formData.email}
                   onChange={handleChange}
                   required
-                  placeholder="jane@example.com"
+                  placeholder="email address"
                   containerClassName="mb-0"
                 />
               </div>
@@ -232,7 +232,7 @@ const ContactPage = () => {
                 value={formData.subject}
                 onChange={handleChange}
                 required
-                placeholder="How can we help?"
+                placeholder="subject"
                 containerClassName="mb-0"
               />
 
@@ -245,7 +245,7 @@ const ContactPage = () => {
                   value={formData.message}
                   onChange={handleChange}
                   required
-                  placeholder="Write your message here..."
+                  placeholder="write your message..."
                   className="w-full p-4 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-4 focus:ring-primary/10 focus:border-primary transition-all outline-none min-h-[150px] resize-none font-medium text-slate-800"
                 ></textarea>
               </div>
