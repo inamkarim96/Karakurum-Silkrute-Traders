@@ -12,6 +12,7 @@ import {
   Settings,
   Briefcase,
   Users2,
+  MessageSquareQuote,
   ArrowLeft,
   Menu,
   X
@@ -78,7 +79,8 @@ const AdminLayout = ({ children }) => {
             { to: '/admin/orders', icon: FiShoppingBag, label: 'Orders', showBadge: true },
             { to: '/admin/users', icon: FiUsers, label: 'Users' },
             { to: '/admin/services', icon: Briefcase, label: 'Services' },
-            { to: '/admin/team', icon: Users2, label: 'Team' }
+            { to: '/admin/team', icon: Users2, label: 'Team' },
+            { to: '/admin/testimonials', icon: MessageSquareQuote, label: 'Testimonials' }
           ].map(({ to, icon: Icon, label, end, showBadge }) => (
             <NavLink
               key={to}

@@ -29,6 +29,7 @@ const AdminCategories = lazy(() => import('./pages/AdminCategories'));
 const AdminSettings = lazy(() => import('./pages/AdminSettings'));
 const AdminServices = lazy(() => import('./pages/AdminServices'));
 const AdminTeam = lazy(() => import('./pages/AdminTeam'));
+const AdminTestimonials = lazy(() => import('./pages/AdminTestimonials'));
 const PaymentFailedPage = lazy(() => import('./pages/PaymentFailedPage'));
 
 const PrivateRoute = ({ children }) => {
@@ -110,6 +111,7 @@ function App() {
               <Route path="settings" element={<PageWrapper><AdminSettings /></PageWrapper>} />
               <Route path="services" element={<PageWrapper><AdminServices /></PageWrapper>} />
               <Route path="team" element={<PageWrapper><AdminTeam /></PageWrapper>} />
+              <Route path="testimonials" element={<PageWrapper><AdminTestimonials /></PageWrapper>} />
             </Route>
 
             <Route path="/AdminDashboard" element={<Navigate to="/admin" replace />} />

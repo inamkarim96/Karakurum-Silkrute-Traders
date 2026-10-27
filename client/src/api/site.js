@@ -72,3 +72,28 @@ export const deleteTeamMember = async (id) => {
   clearApiCache();
   return response.data;
 };
+
+// ── Testimonials (Client feedback for Landing page) ────────────────────────
+export const getTestimonials = async (includeInactive = false) => {
+  const response = await api.get('/testimonials', { params: includeInactive ? { all: 'true' } : {} });
+  return response.data;
+};
+
+export const createTestimonial = async (data) => {
+  const response = await api.post('/testimonials', data);
+  clearApiCache();
+  return response.data;
+};
+
+export const updateTestimonial = async (id, data) => {
+  const response = await api.put(`/testimonials/${id}`, data);
+  clearApiCache();
+  return response.data;
+};
+
+export const deleteTestimonial = async (id) => {
+  const response = await api.delete(`/testimonials/${id}`);
+  clearApiCache();
+  return response.data;
+};
+

@@ -16,6 +16,33 @@ const services = [
   { title: 'Customs Support', description: 'Guidance through import documentation and customs processes.', icon: 'customs', sort_order: 3 }
 ];
 
+const starterTestimonials = [
+  {
+    name: 'Tariq Mehmood',
+    role: 'Textile Retailer, Lahore',
+    quote: 'We have been ordering wholesale blanket cartons from Karakurum Silkrute Traders for two seasons. The quality check in Danyore and cargo dispatch to Lahore is always on time.',
+    rating: 5,
+    sort_order: 0,
+    is_active: true
+  },
+  {
+    name: 'Shabbir Hussain',
+    role: 'Hotel Operator, Hunza & Skardu',
+    quote: 'Finding durable, warm blankets for hospitality in northern winters is tough. Their premium wool quilts exceeded our expectations. Highly recommended!',
+    rating: 5,
+    sort_order: 1,
+    is_active: true
+  },
+  {
+    name: 'Amina Farooq',
+    role: 'Retail Buyer, Islamabad',
+    quote: 'Prompt WhatsApp customer support and hassle-free payment. The blankets arrived well-packaged and even more luxurious than pictured.',
+    rating: 5,
+    sort_order: 2,
+    is_active: true
+  }
+];
+
 async function seed() {
   const existingSettings = await prisma.site_settings.findFirst();
   const settingsData = {
@@ -42,6 +69,15 @@ async function seed() {
       await prisma.services.update({ where: { id: existing.id }, data: service });
     } else {
       await prisma.services.create({ data: service });
+    }
+  }
+
+  for (const item of starterTestimonials) {
+    const existing = await prisma.testimonials.findFirst({ where: { name: item.name } });
+    if (existing) {
+      await prisma.testimonials.update({ where: { id: existing.id }, data: item });
+    } else {
+      await prisma.testimonials.create({ data: item });
     }
   }
 

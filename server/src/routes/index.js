@@ -18,6 +18,7 @@ const settingsRoutes = require("../modules/settings/settings.routes");
 const servicesRoutes = require("../modules/services/services.routes");
 const teamRoutes = require("../modules/team/team.routes");
 const notificationsRoutes = require("../modules/notifications/notifications.routes");
+const testimonialsRoutes = require("../modules/testimonials/testimonials.routes");
 
 const router = express.Router();
 
@@ -42,6 +43,7 @@ router.use("/admin/analytics", analyticsRoutes);
 router.use("/settings", settingsRoutes);
 router.use("/services", servicesRoutes);
 router.use("/team", teamRoutes);
+router.use("/testimonials", testimonialsRoutes);
 router.use("/admin/notifications", notificationsRoutes);
 
 const productsController = require("../modules/products/products.controller");
