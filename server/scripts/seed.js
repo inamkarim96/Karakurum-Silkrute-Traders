@@ -1,6 +1,5 @@
-const { PrismaClient } = require('@prisma/client');
-
-const prisma = new PrismaClient();
+require("dotenv").config({ path: require("path").resolve(__dirname, "../.env") });
+const db = require("../src/config/mongo");
 
 const categories = [
   { name: 'Blankets', slug: 'blankets', image: 'https://images.unsplash.com/photo-1580301762395-21ce6e0dcf2d?auto=format&fit=crop&q=80&w=600' },
@@ -44,7 +43,10 @@ const starterTestimonials = [
 ];
 
 async function seed() {
-  const existingSettings = await prisma.site_settings.findFirst();
+  console.log("Connecting to MongoDB Atlas...");
+  await db.$connect();
+
+  const existingSettings = await db.site_settings.findFirst();
   const settingsData = {
     company_name: 'Karakurum Silkrute Traders',
     tagline: 'Wholesale & Retail Trading - Blankets & Home Items',
@@ -54,34 +56,34 @@ async function seed() {
   };
 
   if (existingSettings) {
-    await prisma.site_settings.update({ where: { id: existingSettings.id }, data: settingsData });
+    await db.site_settings.update({ where: { id: existingSettings.id }, data: settingsData });
   } else {
-    await prisma.site_settings.create({ data: settingsData });
+    await db.site_settings.create({ data: settingsData });
   }
 
   for (const category of categories) {
-    await prisma.categories.upsert({ where: { slug: category.slug }, update: category, create: category });
+    await db.categories.upsert({ where: { slug: category.slug }, update: category, create: category });
   }
 
   for (const service of services) {
-    const existing = await prisma.services.findFirst({ where: { title: service.title } });
+    const existing = await db.services.findFirst({ where: { title: service.title } });
     if (existing) {
-      await prisma.services.update({ where: { id: existing.id }, data: service });
+      await db.services.update({ where: { id: existing.id }, data: service });
     } else {
-      await prisma.services.create({ data: service });
+      await db.services.create({ data: service });
     }
   }
 
   for (const item of starterTestimonials) {
-    const existing = await prisma.testimonials.findFirst({ where: { name: item.name } });
+    const existing = await db.testimonials.findFirst({ where: { name: item.name } });
     if (existing) {
-      await prisma.testimonials.update({ where: { id: existing.id }, data: item });
+      await db.testimonials.update({ where: { id: existing.id }, data: item });
     } else {
-      await prisma.testimonials.create({ data: item });
+      await db.testimonials.create({ data: item });
     }
   }
 
-  const blankets = await prisma.categories.findUnique({ where: { slug: 'blankets' } });
+  const blankets = await db.categories.findUnique({ where: { slug: 'blankets' } });
   const products = [
     {
       name: 'Premium Wool Blanket',
@@ -93,8 +95,8 @@ async function seed() {
       stock: 40,
       images: ['https://images.unsplash.com/photo-1580301762395-21ce6e0dcf2d?auto=format&fit=crop&q=80&w=900'],
       is_featured: true,
-      category_id: blankets.id,
-      variants: [
+      category_id: blankets?.id,
+      product_variants: [
         { label: 'Queen - Charcoal', attribute_name: 'Size / Color', attribute_value: 'Queen / Charcoal', price: 8500, wholesale_price: 7200, stock: 20, sort_order: 0 },
         { label: 'King - Maroon', attribute_name: 'Size / Color', attribute_value: 'King / Maroon', price: 9800, wholesale_price: 8300, stock: 20, sort_order: 1 }
       ]
@@ -102,29 +104,19 @@ async function seed() {
   ];
 
   for (const product of products) {
-    const { variants, ...productData } = product;
-    const saved = await prisma.products.upsert({
+    await db.products.upsert({
       where: { slug: product.slug },
-      update: productData,
-      create: productData
+      update: product,
+      create: product
     });
-
-    for (const variant of variants) {
-      const existing = await prisma.product_variants.findFirst({ where: { product_id: saved.id, label: variant.label } });
-      if (existing) {
-        await prisma.product_variants.update({ where: { id: existing.id }, data: variant });
-      } else {
-        await prisma.product_variants.create({ data: { ...variant, product_id: saved.id } });
-      }
-    }
   }
 
-  console.log('Seed data created or updated successfully.');
+  console.log('✅ MongoDB Atlas seed data created or updated successfully.');
 }
 
 seed()
   .catch((error) => {
-    console.error(error);
+    console.error('❌ Seed error:', error);
     process.exitCode = 1;
   })
-  .finally(async () => prisma.$disconnect());
+  .finally(async () => db.$disconnect());

@@ -5,13 +5,13 @@ const Joi = require("joi");
 // - variant_id must be a valid UUID if provided
 // - quantity is capped at 100 per item to prevent abuse
 const orderItemSchema = Joi.object({
-  product_id: Joi.string().uuid().required(),
-  variant_id: Joi.string().uuid().allow("", null).optional(),
+  product_id: Joi.string().required(),
+  variant_id: Joi.string().allow("", null).optional(),
   quantity: Joi.number().integer().min(1).max(100).required(),
   // weight is accepted as an object {id, label} from the frontend for UX,
   // but the actual price is always fetched from the DB — never trusted from client.
   weight: Joi.object({
-    id: Joi.string().uuid().allow("", null).optional(),
+    id: Joi.string().allow("", null).optional(),
     label: Joi.string().max(50).allow("", null).optional()
   }).optional()
   // price is intentionally omitted — will be stripped by stripUnknown
@@ -38,7 +38,7 @@ const adminListOrdersSchema = Joi.object({
     .optional(),
   date_from: Joi.date().iso().optional(),
   date_to: Joi.date().iso().optional(),
-  user_id: Joi.string().uuid().optional(),
+  user_id: Joi.string().optional(),
   page: Joi.number().integer().min(1).default(1),
   limit: Joi.number().integer().min(1).max(100).default(10)
 });

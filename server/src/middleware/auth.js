@@ -1,4 +1,4 @@
-const prisma = require('../config/prisma');
+const prisma = require('../config/mongo');
 const cache = require('../utils/cache');
 const ApiError = require('../utils/apiError');
 const { verify } = require('../utils/sessionToken');

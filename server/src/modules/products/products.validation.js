@@ -4,7 +4,7 @@ const Joi = require("joi");
 // admin (e.g. "Size" / "King", "Color" / "Maroon", "Material" / "Wool"),
 // so the same schema fits blankets, other textiles, or any future item type.
 const variantSchema = Joi.object({
-  id: Joi.string().uuid().optional(),
+  id: Joi.string().optional(),
   label: Joi.string().trim().max(50).required(),
   attribute_name: Joi.string().trim().max(50).allow("", null).optional(),
   attribute_value: Joi.string().trim().max(100).allow("", null).optional(),
@@ -15,7 +15,7 @@ const variantSchema = Joi.object({
 });
 
 const createProductSchema = Joi.object({
-  category_id: Joi.string().uuid().allow(null).optional(),
+  category_id: Joi.string().allow(null, "").optional(),
   name: Joi.string().trim().min(2).max(200).required(),
   description: Joi.string().trim().allow("", null).optional(),
   base_price: Joi.number().precision(2).positive().required(),
@@ -30,7 +30,7 @@ const createProductSchema = Joi.object({
 });
 
 const updateProductSchema = Joi.object({
-  category_id: Joi.string().uuid().optional(),
+  category_id: Joi.string().allow(null, "").optional(),
   name: Joi.string().trim().min(2).max(200).optional(),
   description: Joi.string().trim().allow("", null).optional(),
   base_price: Joi.number().precision(2).positive().optional(),

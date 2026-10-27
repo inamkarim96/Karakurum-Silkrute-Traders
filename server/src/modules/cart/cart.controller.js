@@ -4,8 +4,8 @@ const ApiError = require("../../utils/apiError");
 const { sendSuccess } = require("../../utils/apiResponse");
 
 const addItemSchema = Joi.object({
-  product_id: Joi.string().uuid().required(),
-  variant_id: Joi.string().uuid().required(),
+  product_id: Joi.string().required(),
+  variant_id: Joi.string().required(),
   quantity: Joi.number().integer().positive().required()
 });
 

@@ -1,18 +1,10 @@
-const prisma = require("../../config/prisma");
+const prisma = require("../../config/mongo");
 const ApiError = require("../../utils/apiError");
 const slugify = require("../../utils/slugify");
 const cache = require("../../utils/cache");
 
-// Helper to update search_vector via raw SQL
-async function updateSearchVector(tx, productId) {
-  await tx.$executeRaw`
-    UPDATE products
-    SET search_vector =
-      setweight(to_tsvector('simple', COALESCE(name, '')), 'A') ||
-      setweight(to_tsvector('simple', COALESCE(description, '')), 'B')
-    WHERE id = ${productId}
-  `;
-}
+// Search vector helper - no-op in MongoDB (uses Prisma native regex search)
+async function updateSearchVector() {}
 
 async function ensureUniqueSlug(name, excludeId = null) {
   const baseSlug = slugify(name);
@@ -220,35 +212,31 @@ async function searchProducts({ q, page, limit }) {
   const cached = await cache.get(cacheKey);
   if (cached) return cached;
 
-  const [matches, totalRows] = await Promise.all([
-    prisma.$queryRaw`
-      SELECT id, ts_rank(search_vector, websearch_to_tsquery('simple', ${q})) AS rank
-      FROM products
-      WHERE is_active = true
-        AND search_vector @@ websearch_to_tsquery('simple', ${q})
-      ORDER BY rank DESC, created_at DESC
-      OFFSET ${skip} LIMIT ${limitNum}
-    `,
-    prisma.$queryRaw`
-      SELECT COUNT(*)::int AS total
-      FROM products
-      WHERE is_active = true
-        AND search_vector @@ websearch_to_tsquery('simple', ${q})
-    `
+  const filter = {
+    is_active: true,
+    OR: [
+      { name: { contains: q, mode: "insensitive" } },
+      { description: { contains: q, mode: "insensitive" } }
+    ]
+  };
+
+  const [rows, total] = await Promise.all([
+    prisma.products.findMany({
+      where: filter,
+      skip,
+      take: limitNum,
+      orderBy: { created_at: "desc" },
+      include: {
+        categories: true,
+        product_variants: { orderBy: { sort_order: 'asc' } }
+      }
+    }),
+    prisma.products.count({ where: filter })
   ]);
 
-  const ids = matches.map((match) => match.id);
-  const rows = ids.length === 0 ? [] : await prisma.products.findMany({
-    where: { id: { in: ids } },
-    include: {
-      categories: true,
-      product_variants: { orderBy: { sort_order: 'asc' } }
-    }
-  });
-  const rowMap = new Map(rows.map((row) => [row.id, row]));
+  const ids = rows.map((r) => r.id);
   const reviewMap = await fetchReviewStatsByProductIds(ids);
-  const paginatedProducts = ids.map((id) => mapProduct(rowMap.get(id), reviewMap));
-  const total = totalRows[0]?.total || 0;
+  const paginatedProducts = rows.map((row) => mapProduct(row, reviewMap));
 
   const result = {
     products: paginatedProducts,

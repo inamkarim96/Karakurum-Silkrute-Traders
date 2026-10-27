@@ -1,4 +1,4 @@
-const prisma = require("../../config/prisma");
+const prisma = require("../../config/mongo");
 const ApiError = require("../../utils/apiError");
 const slugify = require("../../utils/slugify");
 const cache = require("../../utils/cache");
@@ -38,7 +38,7 @@ async function buildUniqueCategorySlug(name, excludeId = null) {
       },
       select: { id: true }
     });
-    
+
     if (!existing) return slug;
     slug = `${base}-${Math.random().toString(36).slice(2, 6)}`;
   }

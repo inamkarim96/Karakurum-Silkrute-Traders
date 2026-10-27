@@ -1,7 +1,6 @@
-const { PrismaClient } = require('@prisma/client');
-const bcrypt = require('bcrypt');
-
-const prisma = new PrismaClient();
+require("dotenv").config({ path: require("path").resolve(__dirname, "../.env") });
+const bcrypt = require("bcrypt");
+const db = require("../src/config/mongo");
 
 async function seedAdmin() {
   const adminEmail = process.env.ADMIN_EMAIL;
@@ -13,12 +12,13 @@ async function seedAdmin() {
     process.exit(1);
   }
 
-  console.log(`🔧 Seeding admin user: ${adminEmail}`);
+  console.log(`🔧 Seeding admin user to MongoDB Atlas: ${adminEmail}`);
 
   try {
+    await db.$connect();
     const passwordHash = await bcrypt.hash(adminPassword, 12);
 
-    const admin = await prisma.users.upsert({
+    const admin = await db.users.upsert({
       where: { email: adminEmail.toLowerCase().trim() },
       update: {
         name: 'Admin',
@@ -41,16 +41,16 @@ async function seedAdmin() {
       }
     });
 
-    console.log('✅ Admin user upserted successfully');
+    console.log('✅ Admin user upserted successfully in MongoDB Atlas');
     console.log(`   ID: ${admin.id}`);
     console.log(`   Email: ${admin.email}`);
     console.log(`   Role: ${admin.role}`);
     console.log(`   Active: ${admin.is_active}`);
   } catch (err) {
-    console.error('❌ Failed to seed admin:', err);
+    console.error('❌ Failed to seed admin in MongoDB Atlas:', err);
     process.exit(1);
   } finally {
-    await prisma.$disconnect();
+    await db.$disconnect();
   }
 }
 

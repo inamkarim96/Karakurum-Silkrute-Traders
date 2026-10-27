@@ -1,7 +1,7 @@
 const app = require("./app");
 
 const { PORT, ADMIN_EMAIL } = require("./config/env");
-const prisma = require("./config/prisma");
+const prisma = require("./config/mongo");
 const productsService = require("./modules/products/products.service");
 const categoriesService = require("./modules/categories/categories.service");
 const analyticsService = require("./modules/admin/analytics.service");
@@ -16,7 +16,7 @@ let keepAliveTimer = null;
 function startKeepAlive() {
   keepAliveTimer = setInterval(async () => {
     try {
-      await prisma.$queryRaw`SELECT 1`;
+      await prisma.$runCommandRaw({ ping: 1 });
     } catch (err) {
       console.warn("Keep-alive ping failed (non-fatal):", err.message);
     }
@@ -32,8 +32,8 @@ async function warmCache() {
   try {
     console.log("Warming cache...");
 
-    // 1. Warm DB connection with a raw query — confirms the wire is open
-    await prisma.$queryRaw`SELECT 1`;
+    // 1. Warm DB connection with a MongoDB command — confirms the wire is open
+    await prisma.$runCommandRaw({ ping: 1 });
 
     // 2. Pre-fetch admin user
     if (ADMIN_EMAIL) {
@@ -61,13 +61,13 @@ async function startServer() {
   while (attempt < maxAttempts) {
     try {
       await prisma.$connect();
-      console.log("Connected to PostgreSQL via Prisma");
+      console.log("Connected to MongoDB Atlas");
       break; // success
     } catch (err) {
       attempt++;
-      console.warn(`Prisma connection attempt ${attempt} failed: ${err.message}`);
+      console.warn(`MongoDB connection attempt ${attempt} failed: ${err.message}`);
       if (attempt >= maxAttempts) {
-        console.error('Unable to connect to PostgreSQL after multiple attempts. Exiting.');
+        console.error('Unable to connect to MongoDB Atlas after multiple attempts. Exiting.');
         process.exit(1);
       }
       // Wait before retrying (exponential backoff)

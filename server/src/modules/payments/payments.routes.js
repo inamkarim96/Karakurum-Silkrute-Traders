@@ -9,7 +9,7 @@ const ApiError = require("../../utils/apiError");
 const router = express.Router();
 
 const initiatePaymentSchema = Joi.object({
-  order_id: Joi.string().uuid().required(),
+  order_id: Joi.string().required(),
   gateway: Joi.string().valid("jazzcash", "easypaisa", "stripe", "cod").required()
 });
 

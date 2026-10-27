@@ -1,4 +1,4 @@
-﻿/**
+/**
  * notifications.service.js
  *
  * Manages persistent admin notifications stored in the `notifications` table.
@@ -6,7 +6,7 @@
  * without a page refresh.
  */
 
-const prisma = require("../../config/prisma");
+const prisma = require("../../config/mongo");
 const { notifyAdmins } = require("../../utils/adminNotifier");
 const ApiError = require("../../utils/apiError");
 

@@ -1,4 +1,4 @@
-const prisma = require("../../config/prisma");
+const prisma = require("../../config/mongo");
 const cache = require("../../utils/cache");
 
 async function getOverview() {
@@ -49,24 +49,47 @@ async function getRevenueAnalytics(period = "daily", dateFrom, dateTo) {
         datePart = "day";
     }
 
-    // Use raw query for DATE_TRUNC as Prisma doesn't support it in groupBy yet
-    const result = await prisma.$queryRaw`
-      SELECT 
-        DATE_TRUNC(${datePart}, created_at) as period_label,
-        SUM(total) as revenue,
-        COUNT(id) as order_count
-      FROM orders
-      WHERE status != 'cancelled'
-      ${dateFrom ? prisma.sql`AND created_at >= ${new Date(dateFrom)}` : prisma.sql``}
-      ${dateTo ? prisma.sql`AND created_at <= ${new Date(dateTo)}` : prisma.sql``}
-      GROUP BY period_label
-      ORDER BY period_label ASC
-    `;
+    const whereClause = {
+      status: { not: "cancelled" }
+    };
+    if (dateFrom || dateTo) {
+      whereClause.created_at = {};
+      if (dateFrom) whereClause.created_at.gte = new Date(dateFrom);
+      if (dateTo) whereClause.created_at.lte = new Date(dateTo);
+    }
 
-    return result.map(row => ({
+    const orders = await prisma.orders.findMany({
+      where: whereClause,
+      select: { created_at: true, total: true },
+      orderBy: { created_at: "asc" }
+    });
+
+    const groups = new Map();
+    for (const order of orders) {
+      const d = new Date(order.created_at);
+      let key;
+      if (datePart === "month") {
+        key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-01`;
+      } else if (datePart === "week") {
+        const startOfWeek = new Date(d);
+        startOfWeek.setDate(d.getDate() - d.getDay());
+        key = startOfWeek.toISOString().slice(0, 10);
+      } else {
+        key = d.toISOString().slice(0, 10);
+      }
+
+      if (!groups.has(key)) {
+        groups.set(key, { period_label: key, revenue: 0, order_count: 0 });
+      }
+      const g = groups.get(key);
+      g.revenue += Number(order.total || 0);
+      g.order_count += 1;
+    }
+
+    return Array.from(groups.values()).map(row => ({
       period_label: row.period_label,
-      revenue: parseFloat(row.revenue || 0).toFixed(2),
-      order_count: Number(row.order_count || 0),
+      revenue: row.revenue.toFixed(2),
+      order_count: row.order_count
     }));
   });
 }
