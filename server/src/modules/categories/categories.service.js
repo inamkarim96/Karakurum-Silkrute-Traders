@@ -53,16 +53,14 @@ async function listCategories() {
 
   const categories = await prisma.categories.findMany({
     include: {
-      _count: {
-        select: { products: true }
-      }
+      _count: { select: { products: true } }
     },
     orderBy: { created_at: "desc" }
   });
 
   const result = categories.map((cat) => ({
     ...cat,
-    product_count: cat._count.products
+    product_count: cat._count?.products ?? 0
   }));
 
   await cache.set(cacheKey, result, "EX", 300);
@@ -130,7 +128,8 @@ async function deleteCategory(id) {
     throw new ApiError(404, "Category not found", "CATEGORY_NOT_FOUND");
   }
 
-  if (category._count.products > 0) {
+  const productCount = category._count?.products ?? 0;
+  if (productCount > 0) {
     throw new ApiError(
       400,
       "Cannot delete category with linked products",

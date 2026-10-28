@@ -71,11 +71,18 @@ export const SocketProvider = ({ children }) => {
 
   // ─── Channel 1: Socket.io (created once, never recreated) ─────────────────
   useEffect(() => {
+    // Vercel serverless functions cannot maintain persistent Socket.io connections.
+    // Disable Socket.io when backend is on Vercel to prevent continuous 404 polling errors.
+    const isVercel = typeof BASE_URL === 'string' && BASE_URL.includes('vercel.app');
+    if (isVercel) {
+      return;
+    }
+
     const socket = io(BASE_URL, {
       withCredentials: true,
       reconnection: true,
-      reconnectionAttempts: Infinity,
-      reconnectionDelay: 1000,
+      reconnectionAttempts: 5,
+      reconnectionDelay: 2000,
     });
     socketRef.current = socket;
 

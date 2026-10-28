@@ -38,8 +38,8 @@ async function fetchReviewStatsByProductIds(productIds) {
 
   return stats.reduce((acc, row) => {
     acc[row.product_id] = {
-      avg_rating: row._avg.rating ? Number(row._avg.rating.toFixed(1)) : 0,
-      review_count: Number(row._count.id || 0)
+      avg_rating: row._avg?.rating ? Number(row._avg.rating.toFixed(1)) : 0,
+      review_count: Number(row._count?.id || 0)
     };
     return acc;
   }, {});
@@ -62,17 +62,11 @@ async function getAllProductsFromDB() {
   const cached = await cache.get(cacheKey);
   if (cached) return cached;
 
-  // Fetch products and stats concurrently without BEGIN/COMMIT overhead
+  // Fetch products (with category populated) and review stats concurrently
   const [rows, stats] = await Promise.all([
-
     prisma.products.findMany({
-      select: {
-        id: true, category_id: true, name: true, slug: true,
-        description: true, base_price: true, wholesale_price: true, min_wholesale_qty: true, stock: true, images: true,
-        is_featured: true, is_active: true, created_at: true, updated_at: true,
-        categories: { select: { id: true, name: true, slug: true } },
-        product_variants: { orderBy: { sort_order: "asc" } }
-      }
+      include: { categories: true },
+      orderBy: { created_at: "desc" }
     }),
     prisma.reviews.groupBy({
       by: ["product_id"],
@@ -84,7 +78,7 @@ async function getAllProductsFromDB() {
   const reviewMap = stats.reduce((acc, row) => {
     acc[row.product_id] = {
       avg_rating: row._avg.rating ? Number(row._avg.rating.toFixed(1)) : 0,
-      review_count: Number(row._count.id || 0)
+      review_count: Number(row._count?.id || 0)
     };
     return acc;
   }, {});
@@ -302,55 +296,47 @@ async function getProductBySlug(slug) {
 }
 
 async function createProduct(payload) {
-  return prisma.$transaction(async (tx) => {
-    // Validate category only if provided
-    if (payload.category_id) {
-      const category = await tx.categories.findUnique({
-        where: { id: payload.category_id }
-      });
-      if (!category) {
-        throw new ApiError(400, "Invalid category", "INVALID_CATEGORY");
-      }
+  // Validate category only if provided
+  if (payload.category_id) {
+    const category = await prisma.categories.findUnique({ where: { id: payload.category_id } });
+    if (!category) throw new ApiError(400, "Invalid category", "INVALID_CATEGORY");
+  }
+
+  const slug = await ensureUniqueSlug(payload.name);
+  const variants = payload.product_variants?.map((v, idx) => ({
+    label: v.label,
+    attribute_name: v.attribute_name || null,
+    attribute_value: v.attribute_value || null,
+    price: v.price,
+    wholesale_price: v.wholesale_price ?? null,
+    stock: v.stock ?? 0,
+    sort_order: v.sort_order ?? idx
+  })) || [];
+
+  const totalVariantStock = variants.reduce((sum, v) => sum + (parseInt(v.stock) || 0), 0);
+
+  const product = await prisma.products.create({
+    data: {
+      category_id: payload.category_id || null,
+      name: payload.name,
+      slug,
+      description: payload.description || null,
+      base_price: payload.base_price,
+      wholesale_price: payload.wholesale_price ?? null,
+      min_wholesale_qty: payload.min_wholesale_qty ?? null,
+      stock: variants.length > 0 ? totalVariantStock : (payload.stock ?? 0),
+      images: payload.images || [],
+      is_featured: payload.is_featured ?? false,
+      is_active: payload.is_active ?? true,
+      product_variants: variants
     }
-
-    const slug = await ensureUniqueSlug(payload.name);
-    const totalVariantStock = payload.product_variants?.reduce((sum, v) => sum + (parseInt(v.stock) || 0), 0) || 0;
-
-    const product = await tx.products.create({
-      data: {
-        category_id: payload.category_id || null,
-        name: payload.name,
-        slug,
-        description: payload.description || null,
-        base_price: payload.base_price,
-        wholesale_price: payload.wholesale_price ?? null,
-        min_wholesale_qty: payload.min_wholesale_qty ?? null,
-        stock: payload.product_variants?.length > 0 ? totalVariantStock : (payload.stock ?? 0),
-        images: payload.images || [],
-        is_featured: payload.is_featured ?? false,
-        is_active: payload.is_active ?? true,
-        product_variants: {
-          create: payload.product_variants?.map((v, idx) => ({
-            label: v.label,
-            attribute_name: v.attribute_name || null,
-            attribute_value: v.attribute_value || null,
-            price: v.price,
-            wholesale_price: v.wholesale_price ?? null,
-            stock: v.stock ?? 0,
-            sort_order: v.sort_order ?? idx
-          })) || []
-        }
-      }
-    });
-
-    // Update search_vector for full-text search
-    await updateSearchVector(tx, product.id);
-
-    await cache.del("products:all");
-    await cache.clearPattern("products:list");
-    await cache.clearPattern("products:search");
-    return _getProductByIdWithClient(tx, product.id, true);
   });
+
+  await updateSearchVector();
+  await cache.del("products:all");
+  await cache.clearPattern("products:list");
+  await cache.clearPattern("products:search");
+  return _getProductByIdWithClient(prisma, product.id, true);
 }
 
 async function updateProduct(id, payload) {

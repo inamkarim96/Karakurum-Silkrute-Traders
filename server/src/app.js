@@ -83,6 +83,12 @@ app.get("/favicon.ico", (req, res) => res.status(204).end());
 app.get("/favicon.png", (req, res) => res.status(204).end());
 app.get("/robots.txt", (req, res) => res.type("text/plain").send("User-agent: *\nAllow: /\nDisallow: /api/"));
 
+// In serverless environments (e.g. Vercel), Socket.io is not running as a persistent WebSocket server.
+// Return 200 to prevent noisy 404 polling errors in browser consoles.
+app.all("/socket.io*", (req, res) => {
+  res.status(200).json({ status: "serverless_active", transport: "sse_recommended" });
+});
+
 app.use("/api", apiV1Router);
 
 app.use((req, res) => {
