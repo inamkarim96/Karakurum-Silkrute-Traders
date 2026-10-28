@@ -1,6 +1,7 @@
 const express = require("express");
 const { sendSuccess } = require("../utils/apiResponse");
 const asyncHandler = require("../utils/asyncHandler");
+const { getDbStatus } = require("../config/db");
 const auth = require("../middleware/auth");
 const role = require("../middleware/role");
 const authRoutes = require("../modules/auth/auth.routes");
@@ -25,7 +26,11 @@ const router = express.Router();
 router.get(
   "/health",
   asyncHandler(async (req, res) => {
-    sendSuccess(res, { message: "Karakurum Silkrute Traders backend is running" });
+    const database = await getDbStatus();
+    sendSuccess(res, {
+      message: "Karakurum Silkrute Traders backend is running",
+      database
+    });
   })
 );
 

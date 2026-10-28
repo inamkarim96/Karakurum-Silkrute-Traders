@@ -395,9 +395,39 @@ const db = {
   orders: createModelDelegate(models.Order),
   order_items: {
     ...createModelDelegate(models.Order),
-    async groupBy({ by, where } = {}) {
+    async groupBy({ by, where, _sum, orderBy, take } = {}) {
       await connectDB();
-      return [];
+      const pipeline = [];
+      if (where?.orders?.status) {
+        const orderFilter = toMongoFilter(where.orders);
+        pipeline.push({ $match: orderFilter });
+      }
+      pipeline.push({ $unwind: "$order_items" });
+      pipeline.push({
+        $group: {
+          _id: {
+            product_id: "$order_items.product_id",
+            product_name: "$order_items.product_name"
+          },
+          quantity: { $sum: "$order_items.quantity" },
+          subtotal: { $sum: "$order_items.subtotal" }
+        }
+      });
+      if (orderBy?._sum?.quantity) {
+        pipeline.push({ $sort: { quantity: orderBy._sum.quantity === "desc" ? -1 : 1 } });
+      }
+      if (take) {
+        pipeline.push({ $limit: Number(take) });
+      }
+      const res = await models.Order.aggregate(pipeline);
+      return res.map(r => ({
+        product_id: r._id.product_id?.toString(),
+        product_name: r._id.product_name,
+        _sum: {
+          quantity: r.quantity || 0,
+          subtotal: r.subtotal || 0
+        }
+      }));
     }
   },
   order_history: createModelDelegate(models.Order),
@@ -437,6 +467,73 @@ const db = {
   notifications: createModelDelegate(models.Notification),
 
   product_variants: {
+    async count({ where } = {}) {
+      await connectDB();
+      const pipeline = [
+        { $unwind: "$product_variants" }
+      ];
+      if (where?.stock !== undefined) {
+        const cond = {};
+        if (typeof where.stock === "number") cond.$eq = where.stock;
+        if (where.stock.lt !== undefined) cond.$lt = where.stock.lt;
+        if (where.stock.lte !== undefined) cond.$lte = where.stock.lte;
+        if (where.stock.gt !== undefined) cond.$gt = where.stock.gt;
+        if (where.stock.gte !== undefined) cond.$gte = where.stock.gte;
+        pipeline.push({ $match: { "product_variants.stock": cond } });
+      }
+      pipeline.push({ $count: "total" });
+      const res = await models.Product.aggregate(pipeline);
+      return res[0]?.total || 0;
+    },
+
+    async findMany({ where, include, orderBy } = {}) {
+      await connectDB();
+      const pipeline = [
+        { $unwind: "$product_variants" }
+      ];
+      if (where?.stock !== undefined) {
+        const cond = {};
+        if (typeof where.stock === "number") cond.$eq = where.stock;
+        if (where.stock.lt !== undefined) cond.$lt = where.stock.lt;
+        if (where.stock.lte !== undefined) cond.$lte = where.stock.lte;
+        if (where.stock.gt !== undefined) cond.$gt = where.stock.gt;
+        if (where.stock.gte !== undefined) cond.$gte = where.stock.gte;
+        pipeline.push({ $match: { "product_variants.stock": cond } });
+      }
+      if (orderBy?.stock) {
+        pipeline.push({ $sort: { "product_variants.stock": orderBy.stock === "desc" ? -1 : 1 } });
+      }
+      pipeline.push({
+        $project: {
+          _id: "$product_variants._id",
+          label: "$product_variants.label",
+          attribute_name: "$product_variants.attribute_name",
+          attribute_value: "$product_variants.attribute_value",
+          price: "$product_variants.price",
+          wholesale_price: "$product_variants.wholesale_price",
+          stock: "$product_variants.stock",
+          sort_order: "$product_variants.sort_order",
+          product_id: "$_id",
+          product_name: "$name"
+        }
+      });
+      const res = await models.Product.aggregate(pipeline);
+      return res.map(doc => ({
+        id: doc._id?.toString(),
+        label: doc.label,
+        attribute_name: doc.attribute_name,
+        attribute_value: doc.attribute_value,
+        price: doc.price,
+        wholesale_price: doc.wholesale_price,
+        stock: doc.stock,
+        sort_order: doc.sort_order,
+        product_id: doc.product_id?.toString(),
+        products: {
+          name: doc.product_name
+        }
+      }));
+    },
+
     async findFirst({ where } = {}) {
       await connectDB();
       if (!where) return null;

@@ -96,9 +96,14 @@ app.all("/socket.io*", (req, res) => {
   res.status(200).json({ status: "serverless_active", transport: "sse_recommended" });
 });
 
-// Ensure MongoDB Atlas is connected before executing any API route
+// Ensure MongoDB Atlas is connected before executing any API route.
+// /api/health manages its own connection check so it can report DB status.
 const { connectDB } = require("./config/db");
 app.use("/api", async (req, res, next) => {
+  if (req.path === "/health") {
+    return next();
+  }
+
   try {
     await connectDB();
     next();
