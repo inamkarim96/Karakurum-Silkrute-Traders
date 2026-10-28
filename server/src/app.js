@@ -36,30 +36,37 @@ const cleanFrontendUrl = FRONTEND_URL.replace(/\/+$/, "");
 const allowedOrigins = [
   cleanFrontendUrl, 
   cleanFrontendUrl.toLowerCase(),
+  "http://localhost:4000",
   "http://localhost:5173",
   "http://localhost:5174",
   "http://localhost:5175"
 ];
 
-app.use(
-  cors({
-    origin: (origin, callback) => {
-      if (!origin) return callback(null, true);
-      const norm = origin.replace(/\/+$/, "").toLowerCase();
-      if (allowedOrigins.some(o => o.toLowerCase() === norm)) {
+const corsOptions = {
+  origin: (origin, callback) => {
+    if (!origin) return callback(null, true);
+    const norm = origin.replace(/\/+$/, "").toLowerCase();
+    if (allowedOrigins.some(o => o.toLowerCase() === norm)) {
+      return callback(null, true);
+    }
+    try {
+      const u = new URL(origin);
+      if (u.hostname === "localhost" || u.hostname === "127.0.0.1") {
         return callback(null, true);
       }
-      try {
-        const host = new URL(origin).hostname;
-        if (host.endsWith(".vercel.app")) {
-          return callback(null, true);
-        }
-      } catch (_) {}
-      return callback(null, true);
-    },
-    credentials: true
-  })
-);
+      if (u.hostname.endsWith(".vercel.app")) {
+        return callback(null, true);
+      }
+    } catch (_) {}
+    return callback(null, true);
+  },
+  credentials: true,
+  methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+  allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With", "Accept"]
+};
+
+app.use(cors(corsOptions));
+app.options("*", cors(corsOptions));
 
 app.use(cookieParser());
 app.use("/auth", authLimiter);
