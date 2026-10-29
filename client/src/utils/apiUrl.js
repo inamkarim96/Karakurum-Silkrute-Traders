@@ -1,47 +1,59 @@
 /**
  * Centralized API & Backend URL resolver.
- * Strictly reads from environment variables (.env / Vercel Environment Variables).
- * Automatically handles common URL typos and relative fallbacks.
+ *
+ * In production the app talks to the same origin it was served from (`/api`).
+ * Vercel routes that path to the API function (see vercel.json), so the
+ * frontend never depends on a hardcoded backend hostname and requests can
+ * never be blocked by CORS or a renamed/deleted deployment URL.
+ *
+ * Local development still uses VITE_API_URL / VITE_BACKEND_URL from .env.
  */
 
-function sanitizeUrl(url) {
+const isBrowser = typeof window !== 'undefined';
+const isProduction = import.meta.env.PROD;
+
+function cleanUrl(url) {
   if (!url || typeof url !== 'string') return '';
   return url
     .trim()
-    .replace('karakurum-silkrute-traders-server-b.vercel.app', 'karakurum-silkrute-traders-server.vercel.app')
+    .replace(/^["']|["']$/g, '')
     .replace(/\/+$/, '');
 }
 
 export function getBackendBase() {
-  const envBackend = sanitizeUrl(import.meta.env.VITE_BACKEND_URL);
+  // Same origin as the page: /api is proxied by Vercel.
+  if (isProduction && isBrowser) {
+    return window.location.origin;
+  }
+
+  const envBackend = cleanUrl(import.meta.env.VITE_BACKEND_URL);
   if (envBackend) {
     return envBackend;
   }
 
-  const envApi = sanitizeUrl(import.meta.env.VITE_API_URL);
+  const envApi = cleanUrl(import.meta.env.VITE_API_URL);
   if (envApi) {
     return envApi.replace(/\/api\/?$/, '');
   }
 
-  // Relative / same-origin fallback
-  if (typeof window !== 'undefined') {
-    return window.location.origin;
-  }
-
-  return '';
+  return isBrowser ? window.location.origin : '';
 }
 
 export function getApiBase() {
-  const envApi = sanitizeUrl(import.meta.env.VITE_API_URL);
+  // Relative base: avoids CORS entirely and follows the deployed domain.
+  if (isProduction && isBrowser) {
+    return '/api';
+  }
+
+  const envApi = cleanUrl(import.meta.env.VITE_API_URL);
   if (envApi) {
     return envApi.endsWith('/api') ? envApi : `${envApi}/api`;
   }
 
-  const envBackend = sanitizeUrl(import.meta.env.VITE_BACKEND_URL);
+  const envBackend = cleanUrl(import.meta.env.VITE_BACKEND_URL);
   if (envBackend) {
     return `${envBackend}/api`;
   }
 
-  // Relative / same-origin fallback
   return '/api';
 }
