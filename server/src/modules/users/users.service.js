@@ -1,4 +1,4 @@
-const bcrypt = require("bcrypt");
+const bcrypt = require("bcryptjs");
 const prisma = require("../../config/mongo");
 const cache = require("../../utils/cache");
 const ApiError = require("../../utils/apiError");
