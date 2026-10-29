@@ -8,7 +8,10 @@ const envCopy = { ...process.env };
 
 // Clean and normalize DATABASE_URL
 if (envCopy.DATABASE_URL) {
-  envCopy.DATABASE_URL = envCopy.DATABASE_URL.trim().replace(/^["']|["']$/g, "");
+  envCopy.DATABASE_URL = envCopy.DATABASE_URL
+    .trim()
+    .replace(/^["']|["']$/g, "")
+    .replace(/<([^>]+)>/g, "$1");
 }
 
 // 1. Normalize FRONTEND_URL
@@ -46,7 +49,7 @@ const schema = Joi.object({
     .valid("development", "test", "production")
     .default("development"),
   PORT: Joi.number().integer().min(1).max(65535).default(5000),
-  DATABASE_URL: Joi.string().uri().required(),
+  DATABASE_URL: Joi.string().required(),
   FRONTEND_URL: Joi.string().uri().default("http://localhost:5173"),
   BACKEND_URL: Joi.string().uri().default("http://localhost:8080"),
 
