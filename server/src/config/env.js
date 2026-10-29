@@ -6,6 +6,11 @@ dotenv.config();
 // Auto-fix and normalize URLs for Vercel/production environments
 const envCopy = { ...process.env };
 
+// Clean and normalize DATABASE_URL
+if (envCopy.DATABASE_URL) {
+  envCopy.DATABASE_URL = envCopy.DATABASE_URL.trim().replace(/^["']|["']$/g, "");
+}
+
 // 1. Normalize FRONTEND_URL
 if (!envCopy.FRONTEND_URL || !envCopy.FRONTEND_URL.trim()) {
   if (process.env.VERCEL_URL) {

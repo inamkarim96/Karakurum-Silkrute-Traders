@@ -1,16 +1,24 @@
 /**
  * Centralized API & Backend URL resolver.
  * Strictly reads from environment variables (.env / Vercel Environment Variables).
- * No URLs are hardcoded in source code.
+ * Automatically handles common URL typos and relative fallbacks.
  */
 
+function sanitizeUrl(url) {
+  if (!url || typeof url !== 'string') return '';
+  return url
+    .trim()
+    .replace('karakurum-silkrute-traders-server-b.vercel.app', 'karakurum-silkrute-traders-server.vercel.app')
+    .replace(/\/+$/, '');
+}
+
 export function getBackendBase() {
-  const envBackend = import.meta.env.VITE_BACKEND_URL;
+  const envBackend = sanitizeUrl(import.meta.env.VITE_BACKEND_URL);
   if (envBackend) {
-    return envBackend.replace(/\/+$/, '');
+    return envBackend;
   }
 
-  const envApi = import.meta.env.VITE_API_URL;
+  const envApi = sanitizeUrl(import.meta.env.VITE_API_URL);
   if (envApi) {
     return envApi.replace(/\/api\/?$/, '');
   }
@@ -24,14 +32,14 @@ export function getBackendBase() {
 }
 
 export function getApiBase() {
-  const envApi = import.meta.env.VITE_API_URL;
+  const envApi = sanitizeUrl(import.meta.env.VITE_API_URL);
   if (envApi) {
-    return envApi.endsWith('/api') ? envApi : `${envApi.replace(/\/+$/, '')}/api`;
+    return envApi.endsWith('/api') ? envApi : `${envApi}/api`;
   }
 
-  const envBackend = import.meta.env.VITE_BACKEND_URL;
+  const envBackend = sanitizeUrl(import.meta.env.VITE_BACKEND_URL);
   if (envBackend) {
-    return `${envBackend.replace(/\/+$/, '')}/api`;
+    return `${envBackend}/api`;
   }
 
   // Relative / same-origin fallback
